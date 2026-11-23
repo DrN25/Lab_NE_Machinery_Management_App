@@ -13,7 +13,7 @@ interface UbicacionLineaDao {
     @Query("SELECT * FROM tbl_ubicacion_linea ORDER BY nom_ubicacion COLLATE NOCASE ASC")
     fun getAllOrderByNombre(): Flow<List<UbicacionLineaEntity>>
 
-    @Query("SELECT * FROM tbl_ubicacion_linea WHERE estado_registro = 'A' ORDER BY nom_ubicacion COLLATE NOCASE ASC")
+    @Query("SELECT * FROM tbl_ubicacion_linea WHERE estado_registro = 'A' ORDER BY CAST(cod_ubicacion AS INTEGER) ASC, cod_ubicacion ASC")
     fun getActiveOnlyOrderByNombre(): Flow<List<UbicacionLineaEntity>>
 
     @Query("SELECT * FROM tbl_ubicacion_linea WHERE cod_ubicacion = :codigo LIMIT 1")

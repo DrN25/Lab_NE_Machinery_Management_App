@@ -6,12 +6,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.solucionesmoviles.maquinarias.data.local.AppDatabase
 import com.solucionesmoviles.maquinarias.data.repository.MachineryRepository
+import com.solucionesmoviles.maquinarias.ui.screen.LoginSimuladoScreen
 import com.solucionesmoviles.maquinarias.ui.screen.MaestroScreen
 import com.solucionesmoviles.maquinarias.ui.theme.MaestroMaquinariasTheme
 import com.solucionesmoviles.maquinarias.ui.viewmodel.MaestroViewModel
@@ -35,17 +39,32 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaestroMaquinariasTheme {
+                val state by viewModel.uiState.collectAsState()
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = Color(0xFFF8FAFC)
                 ) {
-                    MaestroScreen(
-                        viewModel = viewModel,
-                        onSalir = {
-                            Toast.makeText(this, "Saliendo del módulo...", Toast.LENGTH_SHORT).show()
-                            finish()
+                    Crossfade(targetState = state.rolActual, label = "auth_transition") { rol ->
+                        if (rol == null) {
+                            LoginSimuladoScreen(
+                                onSeleccionarRol = { seleccionado ->
+                                    viewModel.iniciarSesion(seleccionado)
+                                },
+                                onCerrarApp = {
+                                    Toast.makeText(this@MainActivity, "Cerrando aplicación...", Toast.LENGTH_SHORT).show()
+                                    finish()
+                                }
+                            )
+                        } else {
+                            MaestroScreen(
+                                viewModel = viewModel,
+                                onSalir = {
+                                    // Regresa al selector de rol (login simulado)
+                                    viewModel.cerrarSesion()
+                                }
+                            )
                         }
-                    )
+                    }
                 }
             }
         }

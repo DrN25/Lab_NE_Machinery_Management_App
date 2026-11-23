@@ -61,6 +61,48 @@ enum class TipoReferencia {
     LINEA, PLANTA, UBICACION
 }
 
+enum class RolUsuario(
+    val nombreMostrar: String,
+    val descripcionPermisos: String,
+    val puedeCrear: Boolean,
+    val puedeModificar: Boolean,
+    val puedeCambiarEstado: Boolean,
+    val puedeEliminar: Boolean,
+    val estadosAdmitidos: Set<String>,
+    val badgeColor: Color
+) {
+    ADMIN(
+        nombreMostrar = "Administrador",
+        descripcionPermisos = "Control total: crear, modificar, inactivar, reactivar y eliminar.",
+        puedeCrear = true,
+        puedeModificar = true,
+        puedeCambiarEstado = true,
+        puedeEliminar = true,
+        estadosAdmitidos = setOf("A", "I", "*"),
+        badgeColor = MaquinariasPrimary
+    ),
+    GERENTE(
+        nombreMostrar = "Gerente de Planta",
+        descripcionPermisos = "Puede crear, modificar, inactivar y reactivar. No puede eliminar.",
+        puedeCrear = true,
+        puedeModificar = true,
+        puedeCambiarEstado = true,
+        puedeEliminar = false,
+        estadosAdmitidos = setOf("A", "I"),
+        badgeColor = PlantasPrimary
+    ),
+    EMPLEADO(
+        nombreMostrar = "Empleado / Operario",
+        descripcionPermisos = "Puede consultar, crear y modificar activos. No cambia estados ni elimina.",
+        puedeCrear = true,
+        puedeModificar = true,
+        puedeCambiarEstado = false,
+        puedeEliminar = false,
+        estadosAdmitidos = setOf("A"),
+        badgeColor = LineasPrimary
+    )
+}
+
 data class CatalogoReferencia(
     val codigo: String,
     val nombre: String
@@ -86,14 +128,16 @@ sealed class DialogoConfirmacion {
 }
 
 data class MaestroUiState(
+    val rolActual: RolUsuario? = null, // null = Pantalla de Login Simulado (selección de rol)
     val moduloActual: ModuloTipo = ModuloTipo.MAQUINARIAS,
     val registros: List<RegistroItem> = emptyList(),
-    val filtroEstado: String = "TODOS", // "TODOS", "A", "I", "*"
+    val filtroEstado: String = "A", // Por defecto "A" (Activos); opciones: "A", "I", "*", "TODOS"
     val textoBusqueda: String = "",
     val ordenarPorNombre: Boolean = false,
     val registroSeleccionado: RegistroItem? = null,
     val mostrarSheetRegistro: Boolean = false,
     val modoEdicion: Boolean = false,
+    val codigoSugerido: String = "1",
     val mensajeError: String? = null,
     val dialogoConfirmacion: DialogoConfirmacion? = null,
     val lineasActivas: List<CatalogoReferencia> = emptyList(),
@@ -155,11 +199,20 @@ class MaestroViewModel(
                         }
                         state.copy(
                             registros = lista,
-                            registroSeleccionado = actualizado
+                            registroSeleccionado = actualizado,
+                            codigoSugerido = calcularSiguienteCodigoLibre(lista)
                         )
                     }
                 }
         }
+    }
+
+    private fun calcularSiguienteCodigoLibre(lista: List<RegistroItem>): String {
+        val usados = lista.mapNotNull { it.codigo.toIntOrNull() }.toHashSet()
+        for (n in 1..9999) {
+            if (n !in usados) return n.toString()
+        }
+        return ""
     }
 
     private fun observarReferenciasActivas() {
@@ -186,12 +239,39 @@ class MaestroViewModel(
         }
     }
 
+    fun iniciarSesion(rol: RolUsuario) {
+        _uiState.update {
+            it.copy(
+                rolActual = rol,
+                moduloActual = ModuloTipo.MAQUINARIAS,
+                filtroEstado = "A",
+                textoBusqueda = "",
+                registroSeleccionado = null,
+                mostrarSheetRegistro = false,
+                mensajeError = null,
+                dialogoConfirmacion = null
+            )
+        }
+    }
+
+    fun cerrarSesion() {
+        _uiState.update {
+            it.copy(
+                rolActual = null,
+                registroSeleccionado = null,
+                mostrarSheetRegistro = false,
+                mensajeError = null,
+                dialogoConfirmacion = null
+            )
+        }
+    }
+
     fun cambiarModulo(modulo: ModuloTipo) {
         if (_uiState.value.moduloActual == modulo) return
         _uiState.update {
             it.copy(
                 moduloActual = modulo,
-                filtroEstado = "TODOS",
+                filtroEstado = "A",
                 textoBusqueda = "",
                 registroSeleccionado = null,
                 mostrarSheetRegistro = false,
@@ -340,6 +420,10 @@ class MaestroViewModel(
     }
 
     fun confirmarInactivar(codigo: String, modulo: ModuloTipo) {
+        if (_uiState.value.rolActual?.puedeCambiarEstado != true) {
+            descartarDialogo()
+            return
+        }
         viewModelScope.launch {
             when (modulo) {
                 ModuloTipo.MAQUINARIAS -> repository.inactivarMaquinaria(codigo)
@@ -353,6 +437,10 @@ class MaestroViewModel(
     }
 
     fun confirmarReactivar(codigo: String, modulo: ModuloTipo) {
+        if (_uiState.value.rolActual?.puedeCambiarEstado != true) {
+            descartarDialogo()
+            return
+        }
         viewModelScope.launch {
             when (modulo) {
                 ModuloTipo.MAQUINARIAS -> repository.reactivarMaquinaria(codigo)
@@ -366,6 +454,10 @@ class MaestroViewModel(
     }
 
     fun confirmarEliminar(codigo: String, modulo: ModuloTipo) {
+        if (_uiState.value.rolActual?.puedeEliminar != true) {
+            descartarDialogo()
+            return
+        }
         viewModelScope.launch {
             when (modulo) {
                 ModuloTipo.MAQUINARIAS -> repository.eliminarMaquinaria(codigo)

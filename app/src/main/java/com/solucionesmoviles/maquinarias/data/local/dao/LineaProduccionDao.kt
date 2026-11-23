@@ -13,7 +13,7 @@ interface LineaProduccionDao {
     @Query("SELECT * FROM tbl_linea_produccion ORDER BY nom_linea COLLATE NOCASE ASC")
     fun getAllOrderByNombre(): Flow<List<LineaProduccionEntity>>
 
-    @Query("SELECT * FROM tbl_linea_produccion WHERE estado_registro = 'A' ORDER BY nom_linea COLLATE NOCASE ASC")
+    @Query("SELECT * FROM tbl_linea_produccion WHERE estado_registro = 'A' ORDER BY CAST(cod_linea AS INTEGER) ASC, cod_linea ASC")
     fun getActiveOnlyOrderByNombre(): Flow<List<LineaProduccionEntity>>
 
     @Query("SELECT * FROM tbl_linea_produccion WHERE cod_linea = :codigo LIMIT 1")

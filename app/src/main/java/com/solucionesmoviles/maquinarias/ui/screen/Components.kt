@@ -26,6 +26,7 @@ import com.solucionesmoviles.maquinarias.ui.viewmodel.CatalogoReferencia
 import com.solucionesmoviles.maquinarias.ui.viewmodel.DialogoConfirmacion
 import com.solucionesmoviles.maquinarias.ui.viewmodel.ModuloTipo
 import com.solucionesmoviles.maquinarias.ui.viewmodel.RegistroItem
+import com.solucionesmoviles.maquinarias.ui.viewmodel.RolUsuario
 
 @Composable
 fun SalirButton(
@@ -86,22 +87,26 @@ fun FiltroChipItem(
 }
 
 @Composable
-fun EstadoPillBadge(estado: String) {
+fun EstadoPillBadge(
+    estado: String,
+    completo: Boolean = false
+) {
     val (fondo, texto, etiqueta) = when (estado) {
-        "A" -> Triple(StatusActiveBg, StatusActiveText, "A · Activo")
-        "I" -> Triple(StatusInactiveBg, StatusInactiveText, "I · Inactivo")
-        else -> Triple(StatusDeletedBg, StatusDeletedText, "* · Eliminado")
+        "A" -> Triple(StatusActiveBg, StatusActiveText, if (completo) "A · Activo" else "A")
+        "I" -> Triple(StatusInactiveBg, StatusInactiveText, if (completo) "I · Inactivo" else "I")
+        else -> Triple(StatusDeletedBg, StatusDeletedText, if (completo) "* · Eliminado" else "*")
     }
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         color = fondo,
-        modifier = Modifier.padding(2.dp)
+        modifier = Modifier.widthIn(min = 34.dp)
     ) {
         Text(
             text = etiqueta,
             color = texto,
             fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             maxLines = 1,
             softWrap = false,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -113,6 +118,7 @@ fun EstadoPillBadge(estado: String) {
 fun BottomActionPanel(
     seleccionada: RegistroItem,
     modulo: ModuloTipo,
+    rol: RolUsuario,
     onSalirPanel: () -> Unit,
     onModificar: () -> Unit,
     onInactivar: () -> Unit,
@@ -153,17 +159,21 @@ fun BottomActionPanel(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = modulo.containerColor
+                        color = modulo.containerColor,
+                        modifier = Modifier.widthIn(min = 42.dp)
                     ) {
                         Text(
-                            text = "Cód. ${seleccionada.codigo}",
+                            text = seleccionada.codigo,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = modulo.primaryColor,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
-                    EstadoPillBadge(seleccionada.estadoRegistro)
+                    EstadoPillBadge(seleccionada.estadoRegistro, completo = true)
                 }
                 // Consistente con el formulario y barra superior: botón real "Salir"
                 SalirButton(
@@ -189,112 +199,154 @@ fun BottomActionPanel(
             ) {
                 when (seleccionada.estadoRegistro) {
                     "A" -> {
-                        Button(
-                            onClick = onModificar,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            contentPadding = PaddingValues(horizontal = 6.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = modulo.containerColor,
-                                contentColor = modulo.primaryColor
-                            ),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Modificar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        if (rol.puedeModificar) {
+                            Button(
+                                onClick = onModificar,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                contentPadding = PaddingValues(horizontal = 6.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = modulo.containerColor,
+                                    contentColor = modulo.primaryColor
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Modificar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            }
                         }
 
-                        OutlinedButton(
-                            onClick = onInactivar,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            contentPadding = PaddingValues(horizontal = 6.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = StatusInactiveText
-                            ),
-                            border = BorderStroke(1.2.dp, Color(0xFFF59E0B)),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Inactivar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        if (rol.puedeCambiarEstado) {
+                            OutlinedButton(
+                                onClick = onInactivar,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                contentPadding = PaddingValues(horizontal = 6.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = StatusInactiveText
+                                ),
+                                border = BorderStroke(1.2.dp, Color(0xFFF59E0B)),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Inactivar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            }
                         }
 
-                        OutlinedButton(
-                            onClick = onEliminar,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            contentPadding = PaddingValues(horizontal = 6.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = StatusDeletedText
-                            ),
-                            border = BorderStroke(1.2.dp, Color(0xFFEF4444)),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Eliminar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        if (rol.puedeEliminar) {
+                            OutlinedButton(
+                                onClick = onEliminar,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                contentPadding = PaddingValues(horizontal = 6.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = StatusDeletedText
+                                ),
+                                border = BorderStroke(1.2.dp, Color(0xFFEF4444)),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Eliminar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            }
                         }
                     }
 
                     "I" -> {
-                        Button(
-                            onClick = onModificar,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            contentPadding = PaddingValues(horizontal = 6.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = modulo.containerColor,
-                                contentColor = modulo.primaryColor
-                            ),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Modificar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        if (rol.puedeModificar && rol.puedeCambiarEstado) {
+                            Button(
+                                onClick = onModificar,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                contentPadding = PaddingValues(horizontal = 6.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = modulo.containerColor,
+                                    contentColor = modulo.primaryColor
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Modificar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            }
                         }
 
-                        Button(
-                            onClick = onReactivar,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            contentPadding = PaddingValues(horizontal = 6.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = StatusActiveBg,
-                                contentColor = StatusActiveText
-                            ),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Reactivar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        if (rol.puedeCambiarEstado) {
+                            Button(
+                                onClick = onReactivar,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                contentPadding = PaddingValues(horizontal = 6.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = StatusActiveBg,
+                                    contentColor = StatusActiveText
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Reactivar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            }
                         }
 
-                        OutlinedButton(
-                            onClick = onEliminar,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            contentPadding = PaddingValues(horizontal = 6.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = StatusDeletedText
-                            ),
-                            border = BorderStroke(1.2.dp, Color(0xFFEF4444)),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Eliminar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        if (rol.puedeEliminar) {
+                            OutlinedButton(
+                                onClick = onEliminar,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                contentPadding = PaddingValues(horizontal = 6.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = StatusDeletedText
+                                ),
+                                border = BorderStroke(1.2.dp, Color(0xFFEF4444)),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Eliminar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            }
+                        }
+
+                        if (!rol.puedeCambiarEstado && !rol.puedeEliminar) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFFF1F5F9),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "Solo lectura: el perfil ${rol.nombreMostrar} no puede reactivar ni eliminar registros inactivos.",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF475569),
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
                         }
                     }
 
                     "*" -> {
-                        Button(
-                            onClick = onReactivar,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = StatusActiveBg,
-                                contentColor = StatusActiveText
-                            ),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Reactivar", fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                        }
+                        if (rol.puedeCambiarEstado) {
+                            Button(
+                                onClick = onReactivar,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = StatusActiveBg,
+                                    contentColor = StatusActiveText
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Reactivar", fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            }
 
-                        OutlinedButton(
-                            onClick = onInactivar,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = StatusInactiveText
-                            ),
-                            border = BorderStroke(1.2.dp, Color(0xFFF59E0B)),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Inactivar", fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            OutlinedButton(
+                                onClick = onInactivar,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = StatusInactiveText
+                                ),
+                                border = BorderStroke(1.2.dp, Color(0xFFF59E0B)),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Inactivar", fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            }
+                        } else {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFFF1F5F9),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "Solo lectura: el perfil ${rol.nombreMostrar} no puede restaurar registros eliminados.",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF475569),
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -460,14 +512,14 @@ fun ConfirmacionModalOverlay(
 
                             is DialogoConfirmacion.Salir -> {
                                 Text(
-                                    text = "¿Salir de la aplicación?",
+                                    text = "¿Cerrar sesión actual?",
                                     fontSize = 19.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF0F172A)
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = "¿Desea cerrar la sesión de trabajo actual?",
+                                    text = "Regresará a la pantalla de selección de rol para ingresar con otro perfil.",
                                     fontSize = 15.sp,
                                     color = Color(0xFF475569),
                                     lineHeight = 22.sp
@@ -555,7 +607,7 @@ fun ReferencialLookupDialog(
                         color = Color(0xFF0F172A)
                     )
                     Text(
-                        text = "Solo registros activos (A), orden alfabético",
+                        text = "Solo registros activos (A), ordenados por código",
                         fontSize = 12.sp,
                         color = Color(0xFF64748B)
                     )
@@ -566,7 +618,7 @@ fun ReferencialLookupDialog(
                 OutlinedTextField(
                     value = busqueda,
                     onValueChange = { busqueda = it },
-                    placeholder = { Text("Filtrar por nombre o código...", fontSize = 14.sp) },
+                    placeholder = { Text("Filtrar por nombre o código...", fontSize = 14.sp, color = Color(0xFF94A3B8)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF64748B)) },
                     trailingIcon = {
                         if (busqueda.isNotEmpty()) {
@@ -580,7 +632,9 @@ fun ReferencialLookupDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = primaryColor,
-                        unfocusedBorderColor = Color(0xFFCBD5E1)
+                        unfocusedBorderColor = Color(0xFFCBD5E1),
+                        focusedPlaceholderColor = Color(0xFFCBD5E1),
+                        unfocusedPlaceholderColor = Color(0xFF94A3B8)
                     )
                 )
 
@@ -632,13 +686,17 @@ fun ReferencialLookupDialog(
                                     ) {
                                         Surface(
                                             shape = RoundedCornerShape(8.dp),
-                                            color = if (selected) primaryColor else Color(0xFFE2E8F0)
+                                            color = if (selected) primaryColor else Color(0xFFE2E8F0),
+                                            modifier = Modifier.widthIn(min = 42.dp)
                                         ) {
                                             Text(
                                                 text = ref.codigo,
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = if (selected) Color.White else Color(0xFF334155),
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                maxLines = 1,
+                                                softWrap = false,
                                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                             )
                                         }

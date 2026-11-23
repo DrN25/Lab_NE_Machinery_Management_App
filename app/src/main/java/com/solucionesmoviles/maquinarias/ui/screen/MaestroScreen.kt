@@ -48,10 +48,16 @@ fun MaestroScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val modulo = state.moduloActual
+    val estadosAdmitidos = state.rolActual?.estadosAdmitidos ?: setOf("A")
 
-    // Filtrado reactivo en memoria (Estado + Búsqueda por código o nombre)
-    val registrosFiltrados = remember(state.registros, state.filtroEstado, state.textoBusqueda) {
-        state.registros.filter { item ->
+    // Primero restringir registros a los estados permitidos para el rol actual
+    val registrosAdmitidos = remember(state.registros, estadosAdmitidos) {
+        state.registros.filter { it.estadoRegistro in estadosAdmitidos }
+    }
+
+    // Filtrado reactivo en memoria (Estado seleccionado + Búsqueda por código o nombre)
+    val registrosFiltrados = remember(registrosAdmitidos, state.filtroEstado, state.textoBusqueda) {
+        registrosAdmitidos.filter { item ->
             val coincideEstado = when (state.filtroEstado) {
                 "A" -> item.estadoRegistro == "A"
                 "I" -> item.estadoRegistro == "I"
@@ -107,14 +113,26 @@ fun MaestroScreen(
                                         )
                                     }
                                 }
-                                Text(
-                                    text = modulo.titulo,
-                                    fontSize = 19.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF0F172A),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = modulo.titulo,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF0F172A),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    state.rolActual?.let { rol ->
+                                        Text(
+                                            text = "Perfil: ${rol.nombreMostrar}",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = modulo.primaryColor,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
                             }
                             SalirButton(
                                 primaryColor = modulo.primaryColor,
@@ -302,19 +320,19 @@ fun MaestroScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // 3. Chips Horizontales de Filtrado por Estado (conteo memoizado en una sola pasada)
-                    val (conteoTodos, conteoActivos, conteoInactivos, conteoEliminados) = remember(state.registros) {
+                    // 3. Chips Horizontales de Filtrado por Estado (solo estados admitidos por el rol)
+                    val (conteoTodos, conteoActivos, conteoInactivos, conteoEliminados) = remember(registrosAdmitidos) {
                         var activos = 0
                         var inactivos = 0
                         var eliminados = 0
-                        for (item in state.registros) {
+                        for (item in registrosAdmitidos) {
                             when (item.estadoRegistro) {
                                 "A" -> activos++
                                 "I" -> inactivos++
                                 "*" -> eliminados++
                             }
                         }
-                        listOf(state.registros.size, activos, inactivos, eliminados)
+                        listOf(registrosAdmitidos.size, activos, inactivos, eliminados)
                     }
 
                     Row(
@@ -324,29 +342,35 @@ fun MaestroScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FiltroChipItem(
-                            texto = "Todos $conteoTodos",
-                            seleccionado = state.filtroEstado == "TODOS",
-                            primaryColor = modulo.primaryColor,
-                            onClick = { viewModel.setFiltroEstado("TODOS") }
-                        )
-                        FiltroChipItem(
                             texto = "Activos $conteoActivos",
                             seleccionado = state.filtroEstado == "A",
                             primaryColor = modulo.primaryColor,
                             onClick = { viewModel.setFiltroEstado("A") }
                         )
-                        FiltroChipItem(
-                            texto = "Inact. $conteoInactivos",
-                            seleccionado = state.filtroEstado == "I",
-                            primaryColor = modulo.primaryColor,
-                            onClick = { viewModel.setFiltroEstado("I") }
-                        )
-                        FiltroChipItem(
-                            texto = "Elim. $conteoEliminados",
-                            seleccionado = state.filtroEstado == "*",
-                            primaryColor = modulo.primaryColor,
-                            onClick = { viewModel.setFiltroEstado("*") }
-                        )
+                        if ("I" in estadosAdmitidos) {
+                            FiltroChipItem(
+                                texto = "Inact. $conteoInactivos",
+                                seleccionado = state.filtroEstado == "I",
+                                primaryColor = modulo.primaryColor,
+                                onClick = { viewModel.setFiltroEstado("I") }
+                            )
+                        }
+                        if ("*" in estadosAdmitidos) {
+                            FiltroChipItem(
+                                texto = "Elim. $conteoEliminados",
+                                seleccionado = state.filtroEstado == "*",
+                                primaryColor = modulo.primaryColor,
+                                onClick = { viewModel.setFiltroEstado("*") }
+                            )
+                        }
+                        if (estadosAdmitidos.size > 1) {
+                            FiltroChipItem(
+                                texto = "Todos $conteoTodos",
+                                seleccionado = state.filtroEstado == "TODOS",
+                                primaryColor = modulo.primaryColor,
+                                onClick = { viewModel.setFiltroEstado("TODOS") }
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -368,7 +392,7 @@ fun MaestroScreen(
                                     border = BorderStroke(1.dp, CardBorder)
                                 ) {
                                     Column(
-                                        modifier = Modifier.padding(24.dp),
+                                        modifier = Modifier.padding(22.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Icon(
@@ -378,18 +402,52 @@ fun MaestroScreen(
                                             modifier = Modifier.size(36.dp)
                                         )
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = "No se encontraron registros",
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = Color(0xFF475569)
-                                        )
-                                        Text(
-                                            text = "Pruebe cambiar el filtro o presione \"+ Adicionar\".",
-                                            fontSize = 13.sp,
-                                            color = Color(0xFF94A3B8),
-                                            textAlign = TextAlign.Center
-                                        )
+                                        if (state.textoBusqueda.isNotBlank()) {
+                                            val textoLimpio = state.textoBusqueda.trim()
+                                            Text(
+                                                text = "No se encontraron coincidencias con \"$textoLimpio\"",
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color(0xFF0F172A),
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "¿Quiere crear un nuevo registro con ese nombre?",
+                                                fontSize = 13.sp,
+                                                color = Color(0xFF64748B),
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Spacer(modifier = Modifier.height(14.dp))
+                                            Button(
+                                                onClick = { viewModel.abrirAdicion() },
+                                                shape = RoundedCornerShape(10.dp),
+                                                colors = ButtonDefaults.buttonColors(containerColor = modulo.primaryColor),
+                                                modifier = Modifier.height(44.dp)
+                                            ) {
+                                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "Crear \"${textoLimpio.take(22)}\"",
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1
+                                                )
+                                            }
+                                        } else {
+                                            Text(
+                                                text = "No se encontraron registros",
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color(0xFF475569)
+                                            )
+                                            Text(
+                                                text = "Pruebe cambiar el filtro o presione \"+ Adicionar\".",
+                                                fontSize = 13.sp,
+                                                color = Color(0xFF94A3B8),
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -410,60 +468,59 @@ fun MaestroScreen(
                                     border = if (isSelected) BorderStroke(1.8.dp, modulo.primaryColor) else BorderStroke(1.dp, CardBorder),
                                     elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 3.dp else 1.dp)
                                 ) {
-                                    Column(
+                                    Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 14.dp, vertical = 12.dp)
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
+                                        // Código numérico a la izquierda (ancho mínimo 42dp, adaptable hasta 4 dígitos)
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = modulo.containerColor,
+                                            modifier = Modifier.widthIn(min = 42.dp)
                                         ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                modifier = Modifier.weight(1f)
-                                            ) {
-                                                Surface(
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = modulo.containerColor
-                                                ) {
-                                                    Text(
-                                                        text = "Cód. ${item.codigo}",
-                                                        fontSize = 13.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = modulo.primaryColor,
-                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                                    )
-                                                }
-                                            }
-                                            EstadoPillBadge(item.estadoRegistro)
-                                        }
-
-                                        Spacer(modifier = Modifier.height(6.dp))
-
-                                        Text(
-                                            text = item.nombre,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = if (item.estadoRegistro == "*") Color(0xFF94A3B8) else Color(0xFF0F172A),
-                                            textDecoration = if (item.estadoRegistro == "*") TextDecoration.LineThrough else TextDecoration.None
-                                        )
-
-                                        // En Maestro de Maquinarias, mostrar claramente sus 3 datos referenciales
-                                        if (modulo == ModuloTipo.MAQUINARIAS) {
-                                            Spacer(modifier = Modifier.height(6.dp))
-                                            val lineaTxt = item.nomLinea ?: "Cód. ${item.codLinea}"
-                                            val plantaTxt = item.nomPlanta ?: "Cód. ${item.codPlanta}"
-                                            val ubicTxt = item.nomUbicacion ?: "Cód. ${item.codUbicacion}"
                                             Text(
-                                                text = "Línea: $lineaTxt · Planta: $plantaTxt · Ubic.: $ubicTxt",
-                                                fontSize = 12.sp,
-                                                color = Color(0xFF475569),
-                                                lineHeight = 16.sp
+                                                text = item.codigo,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = modulo.primaryColor,
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1,
+                                                softWrap = false,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
                                             )
                                         }
+
+                                        // Nombre y detalle referencial en el centro
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = item.nombre,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = if (item.estadoRegistro == "*") Color(0xFF94A3B8) else Color(0xFF0F172A),
+                                                textDecoration = if (item.estadoRegistro == "*") TextDecoration.LineThrough else TextDecoration.None,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            if (modulo == ModuloTipo.MAQUINARIAS) {
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                val lineaTxt = item.nomLinea ?: "Cód. ${item.codLinea}"
+                                                val plantaTxt = item.nomPlanta ?: "Cód. ${item.codPlanta}"
+                                                val ubicTxt = item.nomUbicacion ?: "Cód. ${item.codUbicacion}"
+                                                Text(
+                                                    text = "$lineaTxt · $plantaTxt · $ubicTxt",
+                                                    fontSize = 11.sp,
+                                                    color = Color(0xFF64748B),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+
+                                        // Estado compacto a la derecha
+                                        EstadoPillBadge(item.estadoRegistro)
                                     }
                                 }
                             }
@@ -471,7 +528,7 @@ fun MaestroScreen(
 
                         item {
                             Text(
-                                text = "Mostrando ${registrosFiltrados.size} de ${state.registros.size} registros",
+                                text = "Mostrando ${registrosFiltrados.size} de ${registrosAdmitidos.size} registros",
                                 fontSize = 12.sp,
                                 color = Color(0xFF64748B),
                                 modifier = Modifier
@@ -490,16 +547,20 @@ fun MaestroScreen(
                     exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
                     modifier = Modifier.align(Alignment.BottomCenter)
                 ) {
-                    state.registroSeleccionado?.let { seleccionada ->
-                        BottomActionPanel(
-                            seleccionada = seleccionada,
-                            modulo = modulo,
-                            onSalirPanel = { viewModel.deseleccionar() },
-                            onModificar = { viewModel.abrirModificacion(seleccionada) },
-                            onInactivar = { viewModel.solicitarInactivar(seleccionada) },
-                            onReactivar = { viewModel.solicitarReactivar(seleccionada) },
-                            onEliminar = { viewModel.solicitarEliminar(seleccionada) }
-                        )
+                    val rolActual = state.rolActual
+                    if (rolActual != null) {
+                        state.registroSeleccionado?.let { seleccionada ->
+                            BottomActionPanel(
+                                seleccionada = seleccionada,
+                                modulo = modulo,
+                                rol = rolActual,
+                                onSalirPanel = { viewModel.deseleccionar() },
+                                onModificar = { viewModel.abrirModificacion(seleccionada) },
+                                onInactivar = { viewModel.solicitarInactivar(seleccionada) },
+                                onReactivar = { viewModel.solicitarReactivar(seleccionada) },
+                                onEliminar = { viewModel.solicitarEliminar(seleccionada) }
+                            )
+                        }
                     }
                 }
             }
@@ -574,6 +635,8 @@ fun MaestroScreen(
                             modulo = modulo,
                             item = state.registroSeleccionado,
                             modoEdicion = state.modoEdicion,
+                            codigoSugerido = state.codigoSugerido,
+                            nombreInicial = if (!state.modoEdicion) state.textoBusqueda.trim().take(60) else "",
                             error = state.mensajeError,
                             codLinea = codLineaSel,
                             nomLinea = nomLineaSel,
@@ -654,6 +717,8 @@ fun MaestroFormSheetContent(
     modulo: ModuloTipo,
     item: RegistroItem?,
     modoEdicion: Boolean,
+    codigoSugerido: String = "1",
+    nombreInicial: String = "",
     error: String?,
     codLinea: String,
     nomLinea: String,
@@ -665,12 +730,12 @@ fun MaestroFormSheetContent(
     onGuardar: (String, String) -> Unit,
     onSalir: () -> Unit
 ) {
-    // En Adición el código inicia VACÍO para que el usuario ingrese un número (sin prefijo, máx. 4 dígitos)
-    var codigo by remember(item, modoEdicion, modulo) {
-        mutableStateOf(if (modoEdicion) (item?.codigo ?: "") else "")
+    // En Adición se sugiere automáticamente un código libre, editable por el usuario
+    var codigo by remember(item, modoEdicion, modulo, codigoSugerido) {
+        mutableStateOf(if (modoEdicion) (item?.codigo ?: "") else codigoSugerido)
     }
-    var nombre by remember(item, modoEdicion, modulo) {
-        mutableStateOf(if (modoEdicion) (item?.nombre ?: "") else "")
+    var nombre by remember(item, modoEdicion, modulo, nombreInicial) {
+        mutableStateOf(if (modoEdicion) (item?.nombre ?: "") else nombreInicial)
     }
 
     Column(
@@ -706,7 +771,7 @@ fun MaestroFormSheetContent(
                     codigo = soloDigitos
                 }
             },
-            placeholder = { Text("Ej: 105", fontSize = 14.sp) },
+            placeholder = { Text("Ej: 105", fontSize = 14.sp, color = Color(0xFF94A3B8)) },
             supportingText = {
                 Text(
                     text = if (modoEdicion) "Clave primaria protegida" else "Solo números · Máximo 4 dígitos (${codigo.length}/4)",
@@ -734,7 +799,9 @@ fun MaestroFormSheetContent(
                 disabledContainerColor = Color(0xFFF1F5F9),
                 disabledTextColor = Color(0xFF334155),
                 focusedBorderColor = modulo.primaryColor,
-                unfocusedBorderColor = Color(0xFFCBD5E1)
+                unfocusedBorderColor = Color(0xFFCBD5E1),
+                focusedPlaceholderColor = Color(0xFFCBD5E1),
+                unfocusedPlaceholderColor = Color(0xFF94A3B8)
             )
         )
 
@@ -751,7 +818,7 @@ fun MaestroFormSheetContent(
         OutlinedTextField(
             value = nombre,
             onValueChange = { nombre = it.take(60) },
-            placeholder = { Text("Ingrese nombre de ${modulo.singular}...", fontSize = 14.sp) },
+            placeholder = { Text("Ingrese el nombre...", fontSize = 14.sp, color = Color(0xFF94A3B8)) },
             supportingText = {
                 Text(
                     text = "Máximo 60 caracteres (${nombre.length}/60)",
@@ -766,7 +833,9 @@ fun MaestroFormSheetContent(
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White,
                 focusedBorderColor = modulo.primaryColor,
-                unfocusedBorderColor = Color(0xFFCBD5E1)
+                unfocusedBorderColor = Color(0xFFCBD5E1),
+                focusedPlaceholderColor = Color(0xFFCBD5E1),
+                unfocusedPlaceholderColor = Color(0xFF94A3B8)
             )
         )
 
@@ -805,7 +874,10 @@ fun MaestroFormSheetContent(
         // Estado de Registro (Default 'A' en Adición)
         Text("Estado de Registro", fontSize = 13.sp, color = Color(0xFF475569), fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(6.dp))
-        EstadoPillBadge(if (modoEdicion) (item?.estadoRegistro ?: "A") else "A")
+        EstadoPillBadge(
+            estado = if (modoEdicion) (item?.estadoRegistro ?: "A") else "A",
+            completo = true
+        )
 
         if (error != null) {
             Spacer(modifier = Modifier.height(12.dp))
