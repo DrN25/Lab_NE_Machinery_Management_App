@@ -7,13 +7,13 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface PlantaProduccionDao {
 
-    @Query("SELECT * FROM tbl_planta_produccion ORDER BY cod_planta ASC")
+    @Query("SELECT * FROM tbl_planta_produccion ORDER BY CAST(cod_planta AS INTEGER) ASC, cod_planta ASC")
     fun getAllOrderByCodigo(): Flow<List<PlantaProduccionEntity>>
 
-    @Query("SELECT * FROM tbl_planta_produccion ORDER BY nom_planta ASC")
+    @Query("SELECT * FROM tbl_planta_produccion ORDER BY nom_planta COLLATE NOCASE ASC")
     fun getAllOrderByNombre(): Flow<List<PlantaProduccionEntity>>
 
-    @Query("SELECT * FROM tbl_planta_produccion WHERE estado_registro = 'A' ORDER BY nom_planta ASC")
+    @Query("SELECT * FROM tbl_planta_produccion WHERE estado_registro = 'A' ORDER BY nom_planta COLLATE NOCASE ASC")
     fun getActiveOnlyOrderByNombre(): Flow<List<PlantaProduccionEntity>>
 
     @Query("SELECT * FROM tbl_planta_produccion WHERE cod_planta = :codigo LIMIT 1")
