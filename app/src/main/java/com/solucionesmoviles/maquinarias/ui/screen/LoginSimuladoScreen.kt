@@ -173,16 +173,23 @@ private fun RolCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
+            @OptIn(ExperimentalLayoutApi::class)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Bottom
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PermisoTag("Crear / Editar", permitido = true)
-                    PermisoTag("Inactivar", permitido = rol.puedeCambiarEstado)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                    modifier = Modifier.weight(1f).padding(end = 8.dp)
+                ) {
+                    PermisoTag("Crear", permitido = rol.puedeCrear)
+                    PermisoTag("Editar", permitido = rol.puedeModificar)
+                    PermisoTag("Inactivar", permitido = rol.puedeInactivar)
+                    PermisoTag("Reactivar", permitido = rol.puedeReactivar)
                     PermisoTag("Eliminar", permitido = rol.puedeEliminar)
                 }
                 Surface(
@@ -221,5 +228,7 @@ private fun PermisoTag(texto: String, permitido: Boolean) {
 private fun iconoPorRol(rol: RolUsuario): ImageVector = when (rol) {
     RolUsuario.ADMIN -> Icons.Default.AdminPanelSettings
     RolUsuario.GERENTE -> Icons.Default.ManageAccounts
-    RolUsuario.EMPLEADO -> Icons.Default.Badge
+    RolUsuario.JEFE_MANT -> Icons.Default.Build
+    RolUsuario.SUPERVISOR -> Icons.Default.Engineering
+    RolUsuario.AUXILIAR -> Icons.Default.Badge
 }

@@ -214,7 +214,7 @@ fun BottomActionPanel(
                             }
                         }
 
-                        if (rol.puedeCambiarEstado) {
+                        if (rol.puedeInactivar) {
                             OutlinedButton(
                                 onClick = onInactivar,
                                 modifier = Modifier.weight(1f).height(48.dp),
@@ -243,62 +243,15 @@ fun BottomActionPanel(
                                 Text("Eliminar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                             }
                         }
-                    }
 
-                    "I" -> {
-                        if (rol.puedeModificar && rol.puedeCambiarEstado) {
-                            Button(
-                                onClick = onModificar,
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                contentPadding = PaddingValues(horizontal = 6.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = modulo.containerColor,
-                                    contentColor = modulo.primaryColor
-                                ),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text("Modificar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                            }
-                        }
-
-                        if (rol.puedeCambiarEstado) {
-                            Button(
-                                onClick = onReactivar,
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                contentPadding = PaddingValues(horizontal = 6.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = StatusActiveBg,
-                                    contentColor = StatusActiveText
-                                ),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text("Reactivar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                            }
-                        }
-
-                        if (rol.puedeEliminar) {
-                            OutlinedButton(
-                                onClick = onEliminar,
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                contentPadding = PaddingValues(horizontal = 6.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = StatusDeletedText
-                                ),
-                                border = BorderStroke(1.2.dp, Color(0xFFEF4444)),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text("Eliminar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                            }
-                        }
-
-                        if (!rol.puedeCambiarEstado && !rol.puedeEliminar) {
+                        if (!rol.puedeModificar && !rol.puedeInactivar && !rol.puedeEliminar) {
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
                                 color = Color(0xFFF1F5F9),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "Solo lectura: el perfil ${rol.nombreMostrar} no puede reactivar ni eliminar registros inactivos.",
+                                    text = "Solo lectura: el perfil ${rol.nombreMostrar} solo puede consultar y crear nuevos registros.",
                                     fontSize = 12.sp,
                                     color = Color(0xFF475569),
                                     modifier = Modifier.padding(12.dp)
@@ -307,12 +260,13 @@ fun BottomActionPanel(
                         }
                     }
 
-                    "*" -> {
-                        if (rol.puedeCambiarEstado) {
+                    // Regla estricta: Inactivo ('I') o Eliminado ('*') NO se puede modificar ni eliminar/inactivar, SOLO Reactivar
+                    "I", "*" -> {
+                        if (rol.puedeReactivar) {
                             Button(
                                 onClick = onReactivar,
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = StatusActiveBg,
                                     contentColor = StatusActiveText
@@ -321,19 +275,6 @@ fun BottomActionPanel(
                             ) {
                                 Text("Reactivar", fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                             }
-
-                            OutlinedButton(
-                                onClick = onInactivar,
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = StatusInactiveText
-                                ),
-                                border = BorderStroke(1.2.dp, Color(0xFFF59E0B)),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text("Inactivar", fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                            }
                         } else {
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
@@ -341,7 +282,7 @@ fun BottomActionPanel(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "Solo lectura: el perfil ${rol.nombreMostrar} no puede restaurar registros eliminados.",
+                                    text = "Solo lectura: el perfil ${rol.nombreMostrar} no puede reactivar registros.",
                                     fontSize = 12.sp,
                                     color = Color(0xFF475569),
                                     modifier = Modifier.padding(12.dp)
@@ -425,7 +366,7 @@ fun ConfirmacionModalOverlay(
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
-                                        Text("Inactivar", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+                                        Text("Confirmar", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
                                     }
                                 }
                             }
@@ -465,7 +406,7 @@ fun ConfirmacionModalOverlay(
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
-                                        Text("Eliminar", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+                                        Text("Confirmar", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
                                     }
                                 }
                             }
@@ -505,7 +446,7 @@ fun ConfirmacionModalOverlay(
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
-                                        Text("Reactivar", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+                                        Text("Confirmar", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
                                     }
                                 }
                             }
@@ -545,7 +486,7 @@ fun ConfirmacionModalOverlay(
                                         colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
-                                        Text("Salir", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+                                        Text("Confirmar", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
                                     }
                                 }
                             }

@@ -66,40 +66,66 @@ enum class RolUsuario(
     val descripcionPermisos: String,
     val puedeCrear: Boolean,
     val puedeModificar: Boolean,
-    val puedeCambiarEstado: Boolean,
+    val puedeInactivar: Boolean,
+    val puedeReactivar: Boolean,
     val puedeEliminar: Boolean,
     val estadosAdmitidos: Set<String>,
     val badgeColor: Color
 ) {
     ADMIN(
-        nombreMostrar = "Administrador",
-        descripcionPermisos = "Control total: crear, modificar, inactivar, reactivar y eliminar.",
+        nombreMostrar = "Administrador de TI",
+        descripcionPermisos = "Control total del sistema en todos los estados.",
         puedeCrear = true,
         puedeModificar = true,
-        puedeCambiarEstado = true,
+        puedeInactivar = true,
+        puedeReactivar = true,
         puedeEliminar = true,
         estadosAdmitidos = setOf("A", "I", "*"),
         badgeColor = MaquinariasPrimary
     ),
     GERENTE(
-        nombreMostrar = "Gerente de Planta",
-        descripcionPermisos = "Puede crear, modificar, inactivar y reactivar. No puede eliminar.",
+        nombreMostrar = "Gerente de Producción",
+        descripcionPermisos = "Supervisión operativa de planta sin borrado definitivo.",
         puedeCrear = true,
         puedeModificar = true,
-        puedeCambiarEstado = true,
+        puedeInactivar = true,
+        puedeReactivar = true,
         puedeEliminar = false,
         estadosAdmitidos = setOf("A", "I"),
         badgeColor = PlantasPrimary
     ),
-    EMPLEADO(
-        nombreMostrar = "Empleado / Operario",
-        descripcionPermisos = "Puede consultar, crear y modificar activos. No cambia estados ni elimina.",
+    JEFE_MANT(
+        nombreMostrar = "Jefe de Mantenimiento",
+        descripcionPermisos = "Gestiona paradas y reactivaciones técnicas de equipos.",
+        puedeCrear = false,
+        puedeModificar = true,
+        puedeInactivar = true,
+        puedeReactivar = true,
+        puedeEliminar = false,
+        estadosAdmitidos = setOf("A", "I"),
+        badgeColor = Color(0xFF0369A1)
+    ),
+    SUPERVISOR(
+        nombreMostrar = "Supervisor de Línea",
+        descripcionPermisos = "Registra y actualiza maquinaria e infraestructura activa.",
         puedeCrear = true,
         puedeModificar = true,
-        puedeCambiarEstado = false,
+        puedeInactivar = false,
+        puedeReactivar = false,
         puedeEliminar = false,
         estadosAdmitidos = setOf("A"),
         badgeColor = LineasPrimary
+    ),
+    AUXILIAR(
+        nombreMostrar = "Auxiliar de Registro",
+        descripcionPermisos = "Alta inicial de nuevos registros y consulta de activos.",
+        puedeCrear = true,
+        puedeModificar = false,
+        puedeInactivar = false,
+        puedeReactivar = false,
+        puedeEliminar = false,
+        estadosAdmitidos = setOf("A"),
+        badgeColor = UbicacionesPrimary
     )
 }
 
@@ -293,6 +319,8 @@ class MaestroViewModel(
     }
 
     fun abrirModificacion(item: RegistroItem) {
+        // Regla estricta: solo registros activos ('A') pueden modificarse y si el rol lo permite
+        if (item.estadoRegistro != "A" || _uiState.value.rolActual?.puedeModificar != true) return
         _uiState.update {
             it.copy(
                 registroSeleccionado = item,
@@ -400,14 +428,17 @@ class MaestroViewModel(
     }
 
     fun solicitarInactivar(item: RegistroItem) {
+        if (item.estadoRegistro != "A" || _uiState.value.rolActual?.puedeInactivar != true) return
         _uiState.update { it.copy(dialogoConfirmacion = DialogoConfirmacion.Inactivar(item, it.moduloActual)) }
     }
 
     fun solicitarEliminar(item: RegistroItem) {
+        if (item.estadoRegistro != "A" || _uiState.value.rolActual?.puedeEliminar != true) return
         _uiState.update { it.copy(dialogoConfirmacion = DialogoConfirmacion.Eliminar(item, it.moduloActual)) }
     }
 
     fun solicitarReactivar(item: RegistroItem) {
+        if (item.estadoRegistro == "A" || _uiState.value.rolActual?.puedeReactivar != true) return
         _uiState.update { it.copy(dialogoConfirmacion = DialogoConfirmacion.Reactivar(item, it.moduloActual)) }
     }
 
@@ -420,7 +451,7 @@ class MaestroViewModel(
     }
 
     fun confirmarInactivar(codigo: String, modulo: ModuloTipo) {
-        if (_uiState.value.rolActual?.puedeCambiarEstado != true) {
+        if (_uiState.value.rolActual?.puedeInactivar != true) {
             descartarDialogo()
             return
         }
@@ -437,7 +468,7 @@ class MaestroViewModel(
     }
 
     fun confirmarReactivar(codigo: String, modulo: ModuloTipo) {
-        if (_uiState.value.rolActual?.puedeCambiarEstado != true) {
+        if (_uiState.value.rolActual?.puedeReactivar != true) {
             descartarDialogo()
             return
         }

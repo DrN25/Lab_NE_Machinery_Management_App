@@ -233,20 +233,19 @@ fun MaestroScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // 2. Fila compacta de Conmutador de Ordenamiento ("Ordenar:") y Botón + Adicionar
+                    // 2. Fila de Conmutador de Ordenamiento ("Ordenar:")
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f, fill = false)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
                                 text = "Ordenar:",
-                                fontSize = 12.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color(0xFF475569),
                                 maxLines = 1,
@@ -268,7 +267,7 @@ fun MaestroScreen(
                                             .clip(RoundedCornerShape(7.dp))
                                             .background(if (!state.ordenarPorNombre) modulo.primaryColor else Color.Transparent)
                                             .clickable { viewModel.setOrdenPorNombre(false) }
-                                            .padding(horizontal = 10.dp),
+                                            .padding(horizontal = 12.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
@@ -287,7 +286,7 @@ fun MaestroScreen(
                                             .clip(RoundedCornerShape(7.dp))
                                             .background(if (state.ordenarPorNombre) modulo.primaryColor else Color.Transparent)
                                             .clickable { viewModel.setOrdenPorNombre(true) }
-                                            .padding(horizontal = 10.dp),
+                                            .padding(horizontal = 12.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
@@ -301,20 +300,6 @@ fun MaestroScreen(
                                     }
                                 }
                             }
-                        }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Button(
-                            onClick = { viewModel.abrirAdicion() },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = modulo.primaryColor),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            modifier = Modifier.height(38.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Adicionar", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                         }
                     }
 
@@ -379,7 +364,7 @@ fun MaestroScreen(
                     LazyColumn(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = if (state.registroSeleccionado != null) 156.dp else 16.dp)
+                        contentPadding = PaddingValues(bottom = if (state.registroSeleccionado != null) 156.dp else 84.dp)
                     ) {
                         if (registrosFiltrados.isEmpty()) {
                             item {
@@ -540,7 +525,39 @@ fun MaestroScreen(
                     }
                 }
 
-                // 5. Panel Inferior de Acciones Rápidas (Propuesta 2: Zona ergonómica del pulgar)
+                // 5. Panel Inferior: si no hay tarjeta seleccionada y el rol puede crear, muestra botón "Adicionar" centrado;
+                // si hay tarjeta seleccionada, muestra las acciones rápidas.
+                AnimatedVisibility(
+                    visible = state.registroSeleccionado == null && !state.mostrarSheetRegistro && state.rolActual?.puedeCrear == true,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                ) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                        color = Color.White,
+                        shadowElevation = 12.dp,
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Button(
+                                onClick = { viewModel.abrirAdicion() },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = modulo.primaryColor),
+                                modifier = Modifier.fillMaxWidth(0.7f).height(48.dp)
+                            ) {
+                                Text("Adicionar", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+                    }
+                }
+
                 AnimatedVisibility(
                     visible = state.registroSeleccionado != null && !state.mostrarSheetRegistro,
                     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -754,9 +771,9 @@ fun MaestroFormSheetContent(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Campo Código (Input manual numérico sin prefijo, máx. 4 dígitos; protegido con candado en edición)
+        // Campo Código (Siempre bloqueado con candado, tanto en Adición como en Modificación)
         Text(
-            text = if (modoEdicion) "Código (no editable)" else "Código",
+            text = if (modoEdicion) "Código (no editable)" else "Código (asignado automáticamente)",
             fontSize = 13.sp,
             color = Color(0xFF475569),
             fontWeight = FontWeight.Bold
@@ -764,32 +781,22 @@ fun MaestroFormSheetContent(
         Spacer(modifier = Modifier.height(4.dp))
         OutlinedTextField(
             value = codigo,
-            onValueChange = { nuevo ->
-                if (!modoEdicion) {
-                    // Validación estricta en tiempo real: solamente dígitos y máximo 4 caracteres
-                    val soloDigitos = nuevo.filter { it.isDigit() }.take(4)
-                    codigo = soloDigitos
-                }
-            },
-            placeholder = { Text("Ej: 105", fontSize = 14.sp, color = Color(0xFF94A3B8)) },
+            onValueChange = {},
             supportingText = {
                 Text(
-                    text = if (modoEdicion) "Clave primaria protegida" else "Solo números · Máximo 4 dígitos (${codigo.length}/4)",
+                    text = if (modoEdicion) "Clave primaria protegida" else "Código numérico asignado automáticamente",
                     fontSize = 12.sp,
                     color = Color(0xFF64748B)
                 )
             },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
-            enabled = !modoEdicion,
+            enabled = false,
             trailingIcon = {
-                if (modoEdicion) {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = "Protegido con candado",
-                        tint = Color(0xFF64748B)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Protegido con candado",
+                    tint = Color(0xFF64748B)
+                )
             },
             singleLine = true,
             shape = RoundedCornerShape(10.dp),
